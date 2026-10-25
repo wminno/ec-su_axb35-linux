@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply ec_su_axb35 fan curve thresholds (Bosgame M5 / AXB35-02)
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for f in fan1 fan2; do echo 45,58,65,72,83 > /sys/class/ec_su_axb35/$f/rampup_curve; echo 40,53,57,67,78 > /sys/class/ec_su_axb35/$f/rampdown_curve; echo curve > /sys/class/ec_su_axb35/$f/mode; done'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
