@@ -1,4 +1,16 @@
 # ec-su_axb35-linux
+
+> **This is a fork** of [cmetz/ec-su_axb35-linux](https://github.com/cmetz/ec-su_axb35-linux).
+> Changes compared to upstream:
+>
+> - **`contrib/bosgame-m5/`** — hardware-tested fan-curve tuning for the Bosgame M5 / BeyondMax:
+>   a systemd unit applying curve thresholds at boot (rampup `45,58,65,72,83` °C, rampdown
+>   `40,53,57,67,78` °C, level-3 hysteresis widened to stop fan-speed bounce) plus a writeup of
+>   the measurements behind them, verified across all three EC power profiles on a
+>   Bosgame M5 (Ryzen AI Max+ 395). See [contrib/bosgame-m5/README.md](contrib/bosgame-m5/README.md).
+>
+> Everything else is unchanged upstream driver code.
+
 Linux driver for the embedded controller on the Sixunited AXB35-02 board.
 
 Vendors using that board:
