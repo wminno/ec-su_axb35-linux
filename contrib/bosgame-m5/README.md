@@ -10,7 +10,7 @@ BIOS 1.07, 128 GB LPDDR5) running Ubuntu with kernel 7.0.0-38-generic.
 The driver's default thresholds (`rampup 60,70,83,95,97`) are too lazy for this machine: under
 sustained all-core load the die reaches **93–99 °C** and holds there, because the stock EC
 behavior ramps the fans late and the chip's power envelope runs hot. The unit in this directory
-applies a curve tuned to this machine's measured thermal bands: moderate fans for CPU-only
+applies a curve tuned to this machine's measured thermal bands: quiet fans for CPU-only
 background work, 80% for sustained heavy load, 100% only as an emergency rung, and step-downs
 that track the *current* die temperature rather than its recent peak.
 
@@ -21,27 +21,28 @@ Levels are the EC's own: 0=0%, 1=20%, 2=40%, 3=60%, 4=80%, 5=100%.
 | EC temp rises past | Level | Duty | Note |
 |---|---|---|---|
 | 45 °C | 1 | 20% | never fully stops — avoids spin-cycling at idle |
-| 58 °C | 2 | 40% | steady-state rung for light inference (~55 W GPU) |
-| 66 °C | 3 | 60% | owns the entire CPU-only background band (71–82 °C) |
+| 58 °C | 2 | 40% | steady-state rung: light inference (~55 W GPU) and the entire CPU-only band (66–82 °C) |
+| 83 °C | 3 | 60% | transient decay rung, see the retune history below |
 | 84 °C | 4 | 80% | sustained maximum, see the 80% note below |
 | 90 °C | 5 | 100% | emergency rung only |
 
-Down-steps use `rampdown_curve = 40,53,58,76,84` — each threshold 6–8 °C below the matching
-up-threshold. The down-threshold for level 3 sits at 58 °C (originally widened from 60 after
-hardware testing showed the EC sensor's ±2–3 °C noise caused a level 2↔3 bounce, ~800 rpm
-swing, in the 60–65 °C band).
+Down-steps use `rampdown_curve = 40,53,79,80,84` — every hysteresis gap is 4–6 °C, above the
+EC sensor's ±2–3 °C noise. (An earlier narrow gap caused a level 2↔3 bounce, ~800 rpm swing,
+in the 60–65 °C band.)
 
-**Why the mid-band thresholds sit where they do (v2 retune):** the EC register reads package
-heat from *both* CPU and GPU sides, and its measured bands are — steady 55 W inference
-53–63 °C, CPU-only background 71–82 °C, transient CPU bursts 87–90 °C, heavy inference
-87–98 °C. The original curve (up `45,58,65,72,83`) put level 4 at 72 °C, directly inside the
-CPU-only band, so background CPU work parked the fans at 80% while inference hummed along at
-40%. On this chip the hottest regime is the GPU-*idle* one: the SoC has a single shared power
-budget, so GPU load starves CPU boost and keeps the die cooler than bursty CPU work with the
-full budget. The v2 curve hands the CPU-only band to level 3 and raises the emergency rungs;
-the driver applies thresholds instantaneously every second with no smoothing, so the decay
-thresholds are deliberately tight (4→3 at ≤76 °C, 5→4 at ≤84 °C) — a 1-minute CPU burst spikes
-the fans for a minute, not the ten-plus minutes the wider v1 hysteresis produced.
+**Retune history — why the mid-band sits where it does:** the EC register reads package heat
+from *both* CPU and GPU sides, and its measured bands are — steady 55 W inference 53–63 °C,
+CPU-only background 71–82 °C, transient CPU bursts 87–90 °C, heavy inference 87–98 °C. The
+original curve (up `45,58,65,72,83`) put level 4 at 72 °C, directly inside the CPU-only band,
+so background CPU work parked the fans at 80% while inference hummed along at 40%, and its
+wide hysteresis turned 1-minute CPU bursts into 10+ minutes of max fans. On this chip the
+hottest regime is the GPU-*idle* one: the SoC has a single shared power budget, so GPU load
+starves CPU boost and keeps the die cooler than bursty CPU work with the full budget. The
+current curve keeps every reading at or above 84 °C identical to that first fix but hands
+EC 66–82 °C to level 2: level 3 survives only as a transient decay rung (engages ≥83 °C,
+releases ≤79 °C), so a CPU burst drives the fans for about as long as the heat lasts. The
+trade is deliberate — 40% fans on a 71–82 °C die runs it a few °C hotter, well inside an
+envelope that sustains 93–99 °C under load.
 
 **Why 80% is the practical ceiling:** independent measurements on the same board
 ([crmaris/FanControl.AXB35](https://github.com/crmaris/FanControl.AXB35)) showed that at 100%
