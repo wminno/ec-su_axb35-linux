@@ -4,7 +4,7 @@ After=systemd-modules-load.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'for f in fan1 fan2; do echo 45,58,83,84,90 > /sys/class/ec_su_axb35/$f/rampup_curve; echo 40,53,79,80,84 > /sys/class/ec_su_axb35/$f/rampdown_curve; echo curve > /sys/class/ec_su_axb35/$f/mode; done'
+ExecStart=/bin/sh -c 'for f in fan1 fan2; do echo 45,82,83,84,90 > /sys/class/ec_su_axb35/$f/rampup_curve; echo 40,78,79,80,84 > /sys/class/ec_su_axb35/$f/rampdown_curve; echo curve > /sys/class/ec_su_axb35/$f/mode; done'
 RemainAfterExit=yes
 
 [Install]

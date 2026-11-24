@@ -20,13 +20,13 @@ Levels are the EC's own: 0=0%, 1=20%, 2=40%, 3=60%, 4=80%, 5=100%.
 
 | EC temp rises past | Level | Duty | Note |
 |---|---|---|---|
-| 45 °C | 1 | 20% | never fully stops — avoids spin-cycling at idle |
-| 58 °C | 2 | 40% | steady-state rung: light inference (~55 W GPU) and the entire CPU-only band (66–82 °C) |
-| 83 °C | 3 | 60% | transient decay rung, see the retune history below |
+| 45 °C | 1 | 20% | never fully stops — avoids spin-cycling; owns everything below 82 °C: idle, background CPU work, and light/medium inference |
+| 82 °C | 2 | 40% | transient pass-through, see the retune history below |
+| 83 °C | 3 | 60% | transient pass-through, see the retune history below |
 | 84 °C | 4 | 80% | sustained maximum, see the 80% note below |
 | 90 °C | 5 | 100% | emergency rung only |
 
-Down-steps use `rampdown_curve = 40,53,79,80,84` — every hysteresis gap is 4–6 °C, above the
+Down-steps use `rampdown_curve = 40,78,79,80,84` — every hysteresis gap is 4–6 °C, above the
 EC sensor's ±2–3 °C noise. (An earlier narrow gap caused a level 2↔3 bounce, ~800 rpm swing,
 in the 60–65 °C band.)
 
@@ -37,12 +37,18 @@ original curve (up `45,58,65,72,83`) put level 4 at 72 °C, directly inside the 
 so background CPU work parked the fans at 80% while inference hummed along at 40%, and its
 wide hysteresis turned 1-minute CPU bursts into 10+ minutes of max fans. On this chip the
 hottest regime is the GPU-*idle* one: the SoC has a single shared power budget, so GPU load
-starves CPU boost and keeps the die cooler than bursty CPU work with the full budget. The
-current curve keeps every reading at or above 84 °C identical to that first fix but hands
-EC 66–82 °C to level 2: level 3 survives only as a transient decay rung (engages ≥83 °C,
-releases ≤79 °C), so a CPU burst drives the fans for about as long as the heat lasts. The
-trade is deliberate — 40% fans on a 71–82 °C die runs it a few °C hotter, well inside an
-envelope that sustains 93–99 °C under load.
+starves CPU boost and keeps the die cooler than bursty CPU work with the full budget.
+
+That inversion has a consequence worth stating: because idle runs hotter than inference, a
+monotone temperature→speed curve cannot give idle quieter fans than inference — the states
+share a rung or nothing does. The current curve therefore puts **level 1 on everything below
+82 °C** (idle, background CPU work, and inference alike; hardware-verified: 55 W inference
+equilibrates at 79–81 °C die / ~1,570 rpm), keeps levels 2 and 3 as transient pass-throughs
+at 82/83 °C, and leaves every reading at or above 84 °C identical to the original fix: heavy
+bursts get 80%, heavy inference gets 100%. The trade is deliberate — 20% fans let the die run
+a few tens of degrees warmer at light load, well inside an envelope that sustains 93–99 °C
+under load — and when a request ends the die spikes to ~94 °C, the curve steps to 100% and
+decays back to the floor in about 50 seconds.
 
 **Why 80% is the practical ceiling:** independent measurements on the same board
 ([crmaris/FanControl.AXB35](https://github.com/crmaris/FanControl.AXB35)) showed that at 100%
